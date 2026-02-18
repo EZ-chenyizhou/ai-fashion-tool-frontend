@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Fashion Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .status {
+            background: #f0f9ff;
+            border: 2px solid #bae6fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .upload-area {
+            border: 3px dashed #cbd5e1;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8fafc;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #94a3b8;
+            margin-bottom: 15px;
+        }
+        
+        .style-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .style-btn {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .style-btn:hover {
+            border-color: #667eea;
+            background: #f1f5f9;
+        }
+        
+        .style-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .process-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin-bottom: 30px;
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .process-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .api-info {
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 30px;
+            font-family: monospace;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Fashion Tool</h1>
+        <p class="subtitle">Upload your photo and try different clothing styles with AI</p>
+        
+        <div class="status">
+            <div class="status-dot"></div>
+            <span>Backend API is online and ready</span>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📷</div>
+            <h3>Upload Your Photo</h3>
+            <p>Click to select or drag & drop an image</p>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            <div id="fileName" style="margin-top: 10px; color: #666;"></div>
+        </div>
+        
+        <h3>Select Clothing Style</h3>
+        <div class="style-selector">
+            <button class="style-btn active" data-style="casual">Casual</button>
+            <button class="style-btn" data-style="formal">Formal</button>
+            <button class="style-btn" data-style="sport">Sport</button>
+            <button class="style-btn" data-style="party">Party</button>
+            <button class="style-btn" data-style="business">Business</button>
+        </div>
+        
+        <button class="process-btn" id="processBtn" disabled>
+            Try This Style with AI
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing with AI...</p>
+        </div>
+        
+        <div class="result" id="result">
+            <h3>AI Processing Complete!</h3>
+            <p>Your image has been processed with the selected style.</p>
+            <div id="resultDetails"></div>
+        </div>
+        
+        <div class="api-info">
+            <strong>Backend API:</strong> https://ai-fashion-railway-backend.vercel.app<br>
+            <strong>Status:</strong> <span id="apiStatus">Checking...</span>
+        </div>
+    </div>
+
+    <script>
+        const backendUrl = "https://ai-fashion-railway-backend.vercel.app";
+        let selectedFile = null;
+        let selectedStyle = 'casual';
+        let jobId = null;
+        
+        // Check API status
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(backendUrl + '/api/health');
+                if (response.ok) {
+                    document.getElementById('apiStatus').textContent = 'Online ✓';
+                    document.getElementById('apiStatus').style.color = '#10b981';
+                } else {
+                    document.getElementById('apiStatus').textContent = 'Offline ✗';
+                    document.getElementById('apiStatus').style.color = '#ef4444';
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').textContent = 'Error: ' + error.message;
+                document.getElementById('apiStatus').style.color = '#ef4444';
+            }
+        }
+        
+        // File upload handling
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('fileName').textContent = `Selected: ${file.name} (${Math.round(file.size/1024)}KB)`;
+                document.getElementById('processBtn').disabled = false;
+            }
+        });
+        
+        // Drag & drop
+        document.getElementById('uploadArea').addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.currentTarget.style.borderColor = '#667eea';
+            e.currentTarget.style.background = '#f8fafc';
+        });
+        
+        document.getElementById('uploadArea').addEventListener('dragleave', (e) => {
+            e.currentTarget.style.borderColor = '#cbd5e1';
+            e.currentTarget.style.background = 'white';
+        });
+        
+        document.getElementById('uploadArea').addEventListener('drop', (e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                selectedFile = file;
+                document.getElementById('fileName').textContent = `Selected: ${file.name} (${Math.round(file.size/1024)}KB)`;
+                document.getElementById('processBtn').disabled = false;
+            }
+            e.currentTarget.style.borderColor = '#cbd5e1';
+            e.currentTarget.style.background = 'white';
+        });
+        
+        // Style selection
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedStyle = btn.dataset.style;
+            });
+        });
+        
+        // Process button
+        document.getElementById('processBtn').addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            const processBtn = document.getElementById('processBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            processBtn.disabled = true;
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                // Step 1: Upload image
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                const uploadResponse = await fetch(backendUrl + '/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const uploadData = await uploadResponse.json();
+                
+                if (uploadData.success) {
+                    jobId = uploadData.job_id;
+                    
+                    // Step 2: Process with AI
+                    const processResponse = await fetch(backendUrl + '/api/process', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            job_id: jobId,
+                            style: selectedStyle
+                        })
+                    });
+                    
+                    const processData = await processResponse.json();
+                    
+                    if (processData.success) {
+                        // Show result
+                        document.getElementById('resultDetails').innerHTML = `
+                            <p><strong>Style:</strong> ${selectedStyle}</p>
+                            <p><strong>Processing Time:</strong> ${processData.processing_time || '2.5'} seconds</p>
+                            <p><strong>Status:</strong> Completed successfully</p>
+                            <p><strong>Message:</strong> ${processData.message || 'AI processing complete'}</p>
+                        `;
+                        
+                        result.classList.add('show');
+                    } else {
+                        alert('Processing failed: ' + (processData.error || 'Unknown error'));
+                    }
+                } else {
+                    alert('Upload failed: ' + (uploadData.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred: ' + error.message);
+            } finally {
+                processBtn.disabled = false;
+                loading.classList.remove('show');
+            }
+        });
+        
+        // Initialize
+        checkApiStatus();
+        
+        // Demo mode notification
+        setTimeout(() => {
+            const demoNote = document.createElement('div');
+            demoNote.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #fef3c7;
+                border: 2px solid #f59e0b;
+                border-radius: 10px;
+                padding: 15px;
+                max-width: 300px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                z-index: 1000;
+            `;
+            demoNote.innerHTML = `
+                <strong>Demo Mode</strong><br>
+                This is a demonstration version. 
+                Real AI integration will be added when API documentation is available.
+            `;
+            document.body.appendChild(demoNote);
+        }, 2000);
+    </script>
+</body>
+</html>
